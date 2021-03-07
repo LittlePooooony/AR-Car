@@ -1,73 +1,38 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class MapMenu : MonoBehaviour
+public class MapMenu : Menu
 {
-    public GameObject car;
+    
     public GameObject mapCreateUI;
     public Button testButton;
     public Text text;
-    public SettingControl settingControl;
+    public GameObject saveSlots;
+    private int selectSlot = 0;
+    public GameObject WarningPanel;
 
-    private Vector3 originPos;
-    private Vector3 showPos ;
-    private Vector3 carOriPos;
-    private Quaternion carOriDir;
-
-    private float lastTime = 0;
-    private float m_deltaTime=0;
-
-    private void Start()
+    private new void Start()
     {
-        originPos = transform.position;
+        base.Start();
+        car.SetActive(false);
         GameObject buttonObj = GameObject.Find("TestButton");
-        car = GameObject.FindGameObjectWithTag("Player");
-        carOriDir = car.transform.rotation;
-        carOriPos = car.transform.position;
         testButton = buttonObj.GetComponent<Button>();
         text = buttonObj.GetComponentInChildren<Text>();
-    }
-    private void Update()
-    {
-        m_deltaTime = Time.realtimeSinceStartup - lastTime;
-        lastTime = Time.realtimeSinceStartup;
-    }
-
-    public void ShowMenu()
-    {
-        showPos = originPos + new Vector3(-210, 0, 0);
-        StopAllCoroutines();
-        StartCoroutine(IE_ShowMenu());
-    }
-    public void UnShowMenu()
-    {
-        StopAllCoroutines();
-        StartCoroutine(IE_UnShowMenu());
+        saveSlots = GameObject.Find("UI/Canvas");
+        WarningPanel = GameObject.Find("UI/Canvas/Warning");
+        saveSlots.SetActive(false);
+        WarningPanel.SetActive(false);
     }
 
-    IEnumerator IE_ShowMenu()
-    {
-        while(Vector3.Distance(transform.position, showPos) > 0.2f)
-        {
-            transform.position = Vector3.Lerp(transform.position,showPos,4*m_deltaTime);
-            yield return 0;
-        }
-    }
-    IEnumerator IE_UnShowMenu()
-    {
-        while (Vector3.Distance(transform.position, originPos) > 0.2f)
-        {
-            transform.position = Vector3.Lerp(transform.position, originPos, 4 * m_deltaTime);
-            yield return 0;
-        }
-        transform.position = originPos;
-    }
+
+
 
     public void SaveMap()
     {
-        TrackFactory.Instance.SaveAllTracks();
+        saveSlots.SetActive(true);
     }
     public void LoadMap()
     {
@@ -75,22 +40,26 @@ public class MapMenu : MonoBehaviour
     }
     public void TestMap()
     {
-        GameObject.FindGameObjectWithTag("MainCamera").GetComponent<DriftCamera>().SetFollowCar(true);
+        var temp = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<DriftCamera>();
+        if (temp) temp.SetFollowCar(true);
         testButton.onClick.RemoveAllListeners();
-        testButton.onClick.AddListener(UnTextMap);
+        testButton.onClick.AddListener(UnTestMap);
         settingControl.UnShowMenu();
         text.text = "退出测试";
+        car.SetActive(true);
         car.transform.SetPositionAndRotation(carOriPos,carOriDir);
         car.GetComponent<Rigidbody>().velocity = Vector3.zero;
         mapCreateUI.SetActive(false);
     }
 
-    public void UnTextMap()
+    public void UnTestMap()
     {
-        GameObject.FindGameObjectWithTag("MainCamera").GetComponent<DriftCamera>().SetFollowCar(false);
+        var temp = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<DriftCamera>();
+        if (temp) temp.SetFollowCar(false);
         testButton.onClick.RemoveAllListeners();
         testButton.onClick.AddListener(TestMap);
         text.text = "测试";
+        car.SetActive(false);
         car.transform.SetPositionAndRotation(carOriPos, carOriDir);
         car.GetComponent<Rigidbody>().velocity = Vector3.zero;
         mapCreateUI.SetActive(true);
@@ -98,6 +67,39 @@ public class MapMenu : MonoBehaviour
 
     public void ExitMap()
     {
-        Application.Quit();
+        settingControl.UnShowMenu();
+        SceneManager.LoadScene(0);
+    }
+
+    public void Save(int n)
+    {
+        selectSlot = n;
+        if (GameInfo.Instance.GetSaveSlotBool(n))
+        {
+            WarningPanel.SetActive(true);
+        }
+        else
+        {
+            TrackFactory.Instance.SaveAllTracks(n);
+            saveSlots.SetActive(false);
+            GameInfo.Instance.UpdateSlot();
+        }
+    }
+    public void SaveMapReturn()
+    {
+        saveSlots.SetActive(false);
+    }
+
+    public void SaveComfirm()
+    {
+        TrackFactory.Instance.SaveAllTracks(selectSlot);
+        WarningPanel.SetActive(false);
+        saveSlots.SetActive(false);
+        GameInfo.Instance.UpdateSlot();
+    }
+
+    public void SaveReturn()
+    {
+        WarningPanel.SetActive(false);
     }
 }

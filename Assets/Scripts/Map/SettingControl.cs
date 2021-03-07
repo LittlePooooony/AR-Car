@@ -8,20 +8,20 @@ using UnityEngine.UI;
 public class SettingControl : MonoBehaviour
 {
     public GameObject menu;
-    private MapMenu mapMenu;
+    private Menu myMenu;
 
     private bool isMenuShow = false;
 
     private void Start()
     {
-        mapMenu = menu.GetComponent<MapMenu>();
-    }
+		myMenu = (Menu)menu.GetComponent<Menu>();
+	}
     public void onClick()
     {
         if (!isMenuShow)
         {
             Time.timeScale = 0;
-            mapMenu.ShowMenu();
+            myMenu.ShowMenu();
             isMenuShow = true;
 			GetComponent<Button>().interactable = false;
         }
@@ -34,7 +34,7 @@ public class SettingControl : MonoBehaviour
     public void UnShowMenu()
     {
         Time.timeScale = 1;
-        mapMenu.UnShowMenu();
+        myMenu.UnShowMenu();
         isMenuShow = false;
 		GetComponent<Button>().interactable = true;
 	}
@@ -52,7 +52,7 @@ public class SettingControl : MonoBehaviour
 
 		///相应的GameObject对象
 		GameObject go = null;
-
+#if UNITY_EDITOR
 		///判断是否点再ui上
 		if (EventSystem.current.IsPointerOverGameObject())
 		{
@@ -65,19 +65,37 @@ public class SettingControl : MonoBehaviour
 		else
 		{
 			go = ClickScene();
+			UnShowMenu();
 		}
+#else
+		if (EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId))
+		{
+			go = ClickUI();
+			if (go.tag != "MenuObj" && isMenuShow)
+			{
+				UnShowMenu();
+			}
+		}
+		else
+		{
+			go = ClickScene();
+			UnShowMenu();
+		}
+#endif
 
 		if (go == null)
 		{
-			Debug.Log("Click Nothing");
+			//Debug.Log("Click Nothing");
 			if (isMenuShow) UnShowMenu();
 		}
 		else
 		{
+#if UNITY_EDITOR
 			// 高亮点中GameObject
-			EditorGUIUtility.PingObject(go);
-			Selection.activeObject = go;
-			Debug.Log(go, go);
+			//EditorGUIUtility.PingObject(go);
+			//Selection.activeObject = go;
+			//Debug.Log(go, go);
+#endif
 		}
 
 	}

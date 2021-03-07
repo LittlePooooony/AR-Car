@@ -17,6 +17,7 @@ public class DockingPoint : MonoBehaviour
         {
             foreach (Transform item in GetComponentsInChildren<Transform>(true))
             {
+                if (i > 1) break;
                 if (item.tag == "DockingPoint")
                 {
                     DockingPoints[i++] = item;

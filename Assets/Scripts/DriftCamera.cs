@@ -65,7 +65,6 @@ public class DriftCamera : MonoBehaviour
     }
     public void SetFollowCar(bool value)
     {
-        print(value);
         advancedOptions.updateCameraInFixedUpdate = value;
         if (!value)
         {

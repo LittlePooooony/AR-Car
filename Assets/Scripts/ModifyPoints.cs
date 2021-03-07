@@ -27,7 +27,6 @@ public class ModifyPoints : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
-        print("start");
         pathCreator = gameObject.GetComponent<PathCreator>();
         roadMeshCreator = GetComponent<RoadMeshCreator>();
         numPoints = pathCreator.bezierPath.NumPoints;

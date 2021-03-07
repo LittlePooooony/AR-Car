@@ -36,102 +36,116 @@ public class SelectObject : MonoBehaviour
     private bool isDocking = false;
     private Transform minTransform = null;
     private Transform m_transform = null;
-    private Transform[] transformList=null;
+    private Transform[] transformList = null;
     private float minDis = 0;
     private int m_transformNum = 0;
 
+    private bool isClickTimerCounting = false;
+    private float doubleClickTime = 0.5f;
 
     void Update()
     {
+#if UNITY_EDITOR
         if (Input.GetMouseButtonDown(0))
         {
-            Click(Input.mousePosition);
+            //Click(Input.mousePosition);
+            StartCoroutine(ClickTimer(Input.mousePosition));
         }
 
         if (Input.GetMouseButtonUp(0))
         {
-            if(isDraging && isClicking&&!isWayPointDraging)
+            if (isDraging && isClicking && !isWayPointDraging)
                 ClickRelease();
             isWayPointDraging = false;
             isClicking = false;
             isDraging = false;
         }
 
+#endif
+
 #if UNITY_ANDROID
         if (Input.touchCount == 1)
         {
-            if (Input.touches[0].phase == TouchPhase.Moved || Input.touches[0].phase == TouchPhase.Began)
+
+            if (Input.touches[0].phase == TouchPhase.Began)
             {
-                Click(Input.touches[0].position);
+                //Click(Input.touches[0].position);
+                StartCoroutine(ClickTimer(Input.touches[0].position));
             }
 
             if (Input.touches[0].phase == TouchPhase.Ended)
             {
-                isClicking = false;
+                if (isDraging && isClicking && !isWayPointDraging)
+                    ClickRelease();
                 isWayPointDraging = false;
+                isClicking = false;
+                isDraging = false;
             }
         }
-
-        if (Input.touchCount == 2)
-        {
-            if (Input.touches[0].phase == TouchPhase.Began && Input.touches[1].phase == TouchPhase.Began)
+        if (selectObject)
+            if (Input.touchCount == 2)
             {
-                lasta = Input.touches[0].position;
-                lastb = Input.touches[1].position;
-                lastY = ((lasta + lastb) / 2).y;
-            }
-            if (Input.touches[0].phase == TouchPhase.Moved || Input.touches[1].phase == TouchPhase.Moved)
-            {
-                Vector2 a = Input.touches[0].position;
-                Vector2 b = Input.touches[1].position;
-                Vector2 mid = (a + b) / 2;
-                float angle = Vector2.Angle(b - a, lastb - lasta);
-                float deltaY = mid.y - lastY;
-                if (selectObject && !isMovingY && !isRotating)
+                if (Input.touches[0].phase == TouchPhase.Began || Input.touches[1].phase == TouchPhase.Began)
                 {
-                    if (Input.touches[0].phase == TouchPhase.Stationary || Input.touches[1].phase == TouchPhase.Stationary) isRotating = true;
-                    else
+                    lasta = Input.touches[0].position;
+                    lastb = Input.touches[1].position;
+                    lastY = ((lasta + lastb) / 2).y;
+                }
+                if (Input.touches[0].phase == TouchPhase.Moved || Input.touches[1].phase == TouchPhase.Moved)
+                {
+                    Vector2 a = Input.touches[0].position;
+                    Vector2 b = Input.touches[1].position;
+                    Vector2 mid = (a + b) / 2;
+                    float angle = Vector2.Angle(b - a, lastb - lasta);
+                    float deltaY = mid.y - lastY;
+                    if (selectObject && !isMovingY && !isRotating)
                     {
-                        if (angle > 4) isRotating = true;
-                        else if (Mathf.Abs(deltaY) > 3.5) isMovingY = true;
+                        if (Input.touches[0].phase == TouchPhase.Stationary && Input.touches[1].phase == TouchPhase.Moved
+                                || Input.touches[1].phase == TouchPhase.Stationary && Input.touches[0].phase == TouchPhase.Moved) isRotating = true;
+                        else
+                        {
+                            if (angle > 4) isRotating = true;
+                            else if (Mathf.Abs(deltaY) > 3.5) isMovingY = true;
+
+                        }
                         print(angle + "   " + deltaY);
                     }
+                    print(isRotating+"  "+isMovingY);
+                    if (isRotating)
+                    {
+
+                        angle *= Mathf.Sign(Vector3.Cross(b - a, lastb - lasta).z);
+                        selectObject.transform.Rotate(new Vector3(0, angle, 0));
+                    }
+                    if (isMovingY)
+                    {
+
+                        selectObject.transform.Translate(new Vector3(0, (mid - (lasta + lastb) / 2).y, 0));
+                    }
+                    if (isRotating || isMovingY)
+                    {
+                        lasta = a; lastb = b;
+                    }
+
                 }
 
-                if (isRotating)
+                if (Input.touches[0].phase == TouchPhase.Ended || Input.touches[1].phase == TouchPhase.Ended)
                 {
-
-                    angle *= Mathf.Sign(Vector3.Cross(b - a, lastb - lasta).z);
-                    selectObject.transform.Rotate(new Vector3(0, angle, 0));
-                }
-                if (isMovingY)
-                {
-
-                    selectObject.transform.Translate(new Vector3(0, (mid - (lasta + lastb) / 2).y, 0));
-                }
-                if (isRotating || isMovingY)
-                {
-                    lasta = a; lastb = b;
+                    ClickRelease();
+                    isRotating = false;
+                    isMovingY = false;
                 }
 
             }
-
-            if (Input.touches[0].phase == TouchPhase.Ended || Input.touches[1].phase == TouchPhase.Ended)
-            {
-                ClickRelease();
-            }
-
-        }
 #endif
 
         if (isClicking && !isWayPointDraging)
         {
-            
+
             var hitDis = Camera.main.WorldToScreenPoint(selectObject.transform.position).z;
-            
+
             //targetPos = Camera.main.ScreenToWorldPoint(new Vector3(Input.touches[0].position.x, Input.touches[0].position.y, hitDis));
             var targetPos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, hitDis));
-
             var temp = new Vector3(targetPos.x, selectObject.transform.position.y, targetPos.z);
             var offset = temp - lastPos;
             if (isDraging == false && offset.magnitude != 0)
@@ -141,7 +155,7 @@ public class SelectObject : MonoBehaviour
             }
             selectObject.transform.position += offset;
             lastPos = temp;
-            if(isDraging && !selectObject.GetComponent<ModifyPoints>())
+            if (isDraging && !selectObject.GetComponent<ModifyPoints>())
                 CheckNearest(temp);
         }
 
@@ -172,7 +186,7 @@ public class SelectObject : MonoBehaviour
             if (Physics.Raycast(ray, out hit))
             {
                 var tempObj = hit.collider.gameObject;
-                //print(tempObj+"  "+selectObject);
+                Debug.Log(tempObj + "  " + selectObject);
                 if (tempObj.tag == "WayPoint")
                 {
                     tempObj.transform.parent.gameObject.GetComponent<ModifyPoints>().MovePoint(tempObj);
@@ -214,7 +228,7 @@ public class SelectObject : MonoBehaviour
     }
     private void ClickRelease()
     {
-        print("SelectObj---ClickRelease");
+        print("ClickRelease");
         if (isDocking == true)
         {
             Vector3 offsetVec = selectObject.transform.position - m_transform.position;
@@ -230,10 +244,10 @@ public class SelectObject : MonoBehaviour
         }
         else
         {
-            if ( selectObject)
+            if (selectObject)
             {
                 SpawnManager.Instance.AddOpenListByObj(selectObject);
-            } 
+            }
         }
         ResetNearest();
         isClicking = false;
@@ -256,7 +270,7 @@ public class SelectObject : MonoBehaviour
         ResetNearest();
         List<Transform> list = SpawnManager.Instance.getOpenList();
         foreach (Transform item in list)
-        { 
+        {
             if (minTransform == null)
             {
                 minTransform = item;
@@ -294,5 +308,39 @@ public class SelectObject : MonoBehaviour
     public void SetSelectObject(GameObject obj)
     {
         selectObject = obj;
+    }
+
+    IEnumerator ClickTimer(Vector3 inputPos)
+    {
+        if (isClickTimerCounting) yield break;
+        isClickTimerCounting = true;
+        float timer = 0;
+        Vector3 firstPos = inputPos;
+        while (timer < doubleClickTime)
+        {
+            if (Input.GetMouseButtonUp(0) || Input.touchCount == 1 && Input.touches[0].phase == TouchPhase.Ended)
+            {
+                Click(inputPos);
+
+                if (isDraging && isClicking && !isWayPointDraging)
+                    ClickRelease();
+                isWayPointDraging = false;
+                isClicking = false;
+                isDraging = false;
+
+                isClickTimerCounting = false;
+                yield break;
+            }
+            if (Input.mousePosition != firstPos || Input.touchCount == 1 && Input.touches[0].phase == TouchPhase.Moved)
+            {
+                Click(inputPos);
+                isClickTimerCounting = false;
+                yield break;
+            }
+            yield return 0;
+            timer += Time.deltaTime;
+        }
+        Click(inputPos);
+        isClickTimerCounting = false;
     }
 }

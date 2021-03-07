@@ -9,7 +9,7 @@ public class DragButton : MonoBehaviour,IDragHandler,IBeginDragHandler,IEndDragH
     public GameObject prefabObject;
     private GameObject _objDragSpawning;
     private bool _isDragSpawning = false;
-    public GameObject m_base;
+    private GameObject m_base;
 
     private bool isDocking = false;
     private Transform minTransform = null;
@@ -18,9 +18,20 @@ public class DragButton : MonoBehaviour,IDragHandler,IBeginDragHandler,IEndDragH
     private float minDis = 0;
     private int m_transformNum = 0;
 
+    private GameObject origin;
+    
+    void Awake()
+    {
+        m_base = GameObject.Find("Base");
+    }
     void Start()
     {
         m_base.SetActive(false);
+        origin = GameObject.Find("origin");
+    }
+    public void SetOrigin(GameObject gameObject)
+    {
+        origin = gameObject;
     }
     public void OnBeginDrag(PointerEventData eventData)
     {
@@ -28,12 +39,13 @@ public class DragButton : MonoBehaviour,IDragHandler,IBeginDragHandler,IEndDragH
         if (prefabObject != null)
         {
             _objDragSpawning = Instantiate(prefabObject);
+            if (origin) _objDragSpawning.transform.parent = origin.transform;
             int type=0;
             switch (prefabObject.name) 
             {
-                case "MT_Turn": type = 0;break;
-                case "MT_Road_02": type = 1;break;
-                case "MT_Road_01": type = 2;break;
+                case "Bend": type = 0;break;
+                case "WhiteStraight": type = 1;break;
+                case "RedStraight": type = 2;break;
                 case "CustomCurve":type = 3;break;
             }
             SpawnManager.Instance.addTracks(_objDragSpawning,type);
@@ -54,11 +66,11 @@ public class DragButton : MonoBehaviour,IDragHandler,IBeginDragHandler,IEndDragH
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit))
             {
-                _objDragSpawning.transform.position = new Vector3(hit.point.x,0,hit.point.z);
+                _objDragSpawning.transform.position = new Vector3(hit.point.x, hit.point.y, hit.point.z);
             }
 
             if (!_objDragSpawning.GetComponent<ModifyPoints>()) 
-                CheckNearest(new Vector3(hit.point.x, 0, hit.point.z));
+                CheckNearest(new Vector3(hit.point.x, hit.point.y, hit.point.z));
         }
 #endif
 
@@ -74,10 +86,10 @@ public class DragButton : MonoBehaviour,IDragHandler,IBeginDragHandler,IEndDragH
                     RaycastHit hit;
                     if (Physics.Raycast(ray, out hit))
                     {
-                        _objDragSpawning.transform.position = new Vector3(hit.point.x, 0, hit.point.z);
+                        _objDragSpawning.transform.position = new Vector3(hit.point.x, hit.point.y, hit.point.z);
                     }
                     if (!_objDragSpawning.GetComponent<ModifyPoints>())
-                        CheckNearest(new Vector3(hit.point.x, 0, hit.point.z));
+                        CheckNearest(new Vector3(hit.point.x, hit.point.y, hit.point.z));
                 }
  
                 if (Input.touches[0].phase == TouchPhase.Ended)

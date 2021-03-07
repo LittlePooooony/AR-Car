@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System;
+using UnityStandardAssets.CrossPlatformInput;
 
 [Serializable]
 public enum DriveType
@@ -8,7 +9,6 @@ public enum DriveType
 	FrontWheelDrive,
 	AllWheelDrive
 }
-
 public class WheelDrive : MonoBehaviour
 {
     [Tooltip("Maximum steering angle of the wheels")]
@@ -31,11 +31,13 @@ public class WheelDrive : MonoBehaviour
 	public DriveType driveType;
 
     private WheelCollider[] m_Wheels;
+	private Rigidbody m_rigidbody = null;
 
-    // Find all the WheelColliders down in the hierarchy.
+	// Find all the WheelColliders down in the hierarchy.
 	void Start()
 	{
-		m_Wheels = GetComponentsInChildren<WheelCollider>();
+		if(m_Wheels==null) m_Wheels = GetComponentsInChildren<WheelCollider>();
+		if (m_rigidbody == null) m_rigidbody = GetComponent<Rigidbody>();
 		for (int i = 0; i < m_Wheels.Length; ++i) 
 		{
 			var wheel = m_Wheels [i];
@@ -45,6 +47,7 @@ public class WheelDrive : MonoBehaviour
 			{
 				var ws = Instantiate (wheelShape);
 				ws.transform.parent = wheel.transform;
+				ws.transform.localScale = wheel.transform.localScale;
 			}
 		}
 	}
@@ -56,39 +59,52 @@ public class WheelDrive : MonoBehaviour
 	{
 		m_Wheels[0].ConfigureVehicleSubsteps(criticalSpeed, stepsBelow, stepsAbove);
 
-		float angle = maxAngle * Input.GetAxis("Horizontal");
-		float torque = maxTorque * Input.GetAxis("Vertical");
+		//float angle = maxAngle * Input.GetAxis("Horizontal");
+		//float torque = maxTorque * Input.GetAxis("Vertical");
 
-		float handBrake = Input.GetKey(KeyCode.Space) ? brakeTorque : 0;
+		//移动端
+		float angle = maxAngle * CrossPlatformInputManager.GetAxis("Horizontal");
+		float torque = maxTorque * CrossPlatformInputManager.GetAxis("Vertical");
+
+		//如果移动端没有输入则判断pc
+        if (angle == 0 && torque == 0)
+        {
+			angle = maxAngle * Input.GetAxis("Horizontal");
+			torque = maxTorque * Input.GetAxis("Vertical");
+		}
+		
+		float handBrake = CrossPlatformInputManager.GetAxis("HandBrake")!=0 ? brakeTorque : 0;
+		if(handBrake==0) handBrake = Input.GetKey(KeyCode.Space) ? brakeTorque : 0;
 		foreach (WheelCollider wheel in m_Wheels)
 		{
-			if (torque != 0)
-			{
-				wheel.wheelDampingRate = 0.25f;
-			}
-			else wheel.wheelDampingRate = 10f;
-			// A simple car where front wheels steer while rear ones drive.
-			if (wheel.transform.localPosition.z > 0)
-				wheel.steerAngle = angle;
+            //if (torque != 0)
+            //{
+            //	wheel.wheelDampingRate = 0.25f;
+            //}
+            //else wheel.wheelDampingRate = 10f;
 
-			
+            // A simple car where front wheels steer while rear ones drive.
+            if (wheel.transform.localPosition.z > 0)
+                wheel.steerAngle = angle;
 
-			if (wheel.transform.localPosition.z < 0 && driveType != DriveType.FrontWheelDrive)
-			{
-				wheel.motorTorque = torque;
-			}
 
-			if (wheel.transform.localPosition.z >= 0 && driveType != DriveType.RearWheelDrive)
-			{
-				wheel.motorTorque = torque;
-			}
-			if (wheel.transform.localPosition.z < 0)
-			{
-				wheel.brakeTorque = handBrake;
-			}
 
-			// Update visual wheels if any.
-			if (wheelShape) 
+            if (wheel.transform.localPosition.z < 0 && driveType != DriveType.FrontWheelDrive)
+            {
+                wheel.motorTorque = torque;
+            }
+
+            if (wheel.transform.localPosition.z >= 0 && driveType != DriveType.RearWheelDrive)
+            {
+                wheel.motorTorque = torque;
+            }
+            if (wheel.transform.localPosition.z < 0)
+            {
+                wheel.brakeTorque = handBrake;
+            }
+
+            // Update visual wheels if any.
+            if (wheelShape) 
 			{
 				Quaternion q;
 				Vector3 p;
@@ -108,6 +124,7 @@ public class WheelDrive : MonoBehaviour
                     shapeTransform.rotation = q;
                 }
 			}
-		}
+		}	
 	}
+
 }

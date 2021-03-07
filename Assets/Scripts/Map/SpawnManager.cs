@@ -32,7 +32,13 @@ public class SpawnManager : MonoBehaviour
         openList.Add(temp[0]);
         openList.Add(temp[1]);
     }
-
+    public void SetOriginDocking()
+    {
+        var origin = GameObject.Find("origin");
+        var temp = origin.GetComponent<DockingPoint>().getDockingPoints();
+        openList.Add(temp[0]);
+        openList.Add(temp[1]);
+    }
     public void addTracks(GameObject gameObject,int type)
     {
         trackList.Add(gameObject);

@@ -17,6 +17,10 @@ public class CarDrift : MonoBehaviour
     public WheelCollider[] m_Wheels;
     private WheelFrictionCurve[] preFrictionCurve = new WheelFrictionCurve[4];
 
+    private GameObject[] driftTrail = new GameObject[4];
+    public GameObject trailPre;
+    public GameObject tracks;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -28,6 +32,8 @@ public class CarDrift : MonoBehaviour
         {
             preFrictionCurve[i++] = wheel.sidewaysFriction;
         }
+        trailPre = (GameObject)Resources.Load("Prefabs/Vehicles/DriftTrail");
+        tracks = GameObject.FindGameObjectWithTag("Tracks");
     }
     // Update is called once per frame
     void Update()
@@ -57,7 +63,36 @@ public class CarDrift : MonoBehaviour
             }
         }
         else timer = 0;
-
+        int i = 0;
+        foreach (WheelCollider wheel in m_Wheels)
+        {
+            WheelHit hit;
+            if (wheel.GetGroundHit(out hit))
+            {
+                if (Mathf.Abs(hit.sidewaysSlip) > 0.4 || wheel.transform.localPosition.z < 0 && Mathf.Abs(hit.sidewaysSlip) > 0.15)
+                {
+                    if (driftTrail[i] == null)
+                    {
+                        var temp = GameObject.Instantiate(trailPre,tracks.transform);
+                        TrailRenderer trailRenderer = temp.GetComponent<TrailRenderer>();
+                        trailRenderer.time = Mathf.Infinity;
+                        driftTrail[i] = temp;
+                    }
+                    if (driftTrail[i] != null)
+                    {
+                        driftTrail[i].transform.position = hit.point+Vector3.up*0.1f;
+                    }
+                }
+                else
+                {
+                    if (driftTrail[i] != null)
+                    {
+                        driftTrail[i] = null;
+                    }
+                }
+            }
+            i++;
+        }
     }
     
     private void ChangeFriction()
@@ -99,12 +134,12 @@ public class CarDrift : MonoBehaviour
 
     private void FixedUpdate()
     {
-
+        
         if (isDrifting)
         {
-            
-            //print(m_Wheels[0].sidewaysFriction.asymptoteValue + "    " + m_Wheels[0].sidewaysFriction.extremumValue);
 
+            //print(m_Wheels[0].sidewaysFriction.asymptoteValue + "    " + m_Wheels[0].sidewaysFriction.extremumValue);
+            
         }
         else
         {
